@@ -46,20 +46,24 @@ def generate_real_estate_content(prompt, engine):
         if not gemini_key:
             st.error("Missing GEMINI_API_KEY in Streamlit Secrets!")
             st.stop()
-        try:
-            genai.configure(api_key=gemini_key)
-            model = genai.GenerativeModel('gemini-2.5-flash')
-            response = model.generate_content(prompt)
-            return response.text
-        except Exception as e:
+        
+        genai.configure(api_key=gemini_key)
+        
+        # Try active Gemini Flash models in order
+        gemini_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-flash-lite"]
+        
+        for model_name in gemini_models:
             try:
-                # Fallback model in case of version variations
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model = genai.GenerativeModel(model_name)
                 response = model.generate_content(prompt)
-                return response.text
-            except Exception as e2:
-                st.error(f"Gemini API Error: {str(e2)}")
-                return None
+                if response and response.text:
+                    return response.text
+            except Exception:
+                continue
+                
+        st.error("Gemini API Error: Unable to connect to active Gemini models. Please double-check your GEMINI_API_KEY in Streamlit Secrets.")
+        return None
+        
     else: # OpenAI
         if not openai_key:
             st.error("Missing OPENAI_API_KEY in Streamlit Secrets!")
