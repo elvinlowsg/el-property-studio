@@ -47,11 +47,12 @@ def generate_real_estate_content(prompt, engine):
             st.error("Missing GEMINI_API_KEY in Streamlit Secrets!")
             st.stop()
         
-        # Clean API key to prevent whitespace/quote copy-paste errors
+        # Clean API key to prevent whitespace or quote issues
         clean_key = str(gemini_key).strip().strip('"').strip("'")
         genai.configure(api_key=clean_key)
         
-        gemini_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-flash-lite"]
+        # Active Google Gemini models in order of preference
+        gemini_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
         errors = []
         
         for model_name in gemini_models:
@@ -64,7 +65,8 @@ def generate_real_estate_content(prompt, engine):
                 errors.append(f"{model_name}: {str(e)}")
                 continue
                 
-        st.error(f"Gemini API Error: {errors[-1] if errors else 'Connection failed'}")
+        # If all models failed, show the specific primary error
+        st.error(f"Gemini API Error details: {errors[0] if errors else 'Connection failed'}")
         return None
         
     else: # OpenAI
