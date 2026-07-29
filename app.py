@@ -1,92 +1,162 @@
 import streamlit as st
-from openai import OpenAI
+import openai
+import google.generativeai as genai
 
-# 1. Simple Password Protection
-def check_password():
-    if "authenticated" not in st.session_state:
-        st.session_state["authenticated"] = False
+# --- PAGE CONFIG ---
+st.set_page_config(
+    page_title="Property Studio AI",
+    page_icon="🏠",
+    layout="wide"
+)
 
-    if not st.session_state["authenticated"]:
-        st.title("🔒 Private Real Estate Studio")
-        st.caption("Please enter your password to access your dashboard.")
-        user_password = st.text_input("Password", type="password")
-        
-        if st.button("Unlock Dashboard"):
-            if user_password == st.secrets.get("APP_PASSWORD", "defaultpass"):
-                st.session_state["authenticated"] = True
-                st.rerun()
-            else:
-                st.error("Incorrect password.")
-        return False
-    return True
+# --- SECURITY / PASSWORD PROTECTION ---
+APP_PASSWORD = st.secrets.get("APP_PASSWORD", "default_pass")
 
-if not check_password():
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+
+if not st.session_state["authenticated"]:
+    st.title("🔒 Property Studio AI")
+    user_pass = st.text_input("Enter Password to Access Dashboard:", type="password")
+    if st.button("Login"):
+        if user_pass == APP_PASSWORD:
+            st.session_state["authenticated"] = True
+            st.rerun()
+        else:
+            st.error("Incorrect password. Please try again.")
     st.stop()
 
-# 2. Main Dashboard Layout
-st.set_page_config(page_title="Property Studio", layout="wide")
-st.title("🏡 My Private Real Estate Command Center")
+# --- SIDEBAR CONFIGURATION ---
+st.sidebar.title("⚙️ AI Engine Settings")
 
-# Connect to OpenAI API using your stored secret key
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+# Model Selection Switcher (Gemini is DEFAULT at index 0)
+ai_engine = st.sidebar.selectbox(
+    "Select AI Model:",
+    ["🟢 Google Gemini (Free Tier)", "🔵 OpenAI (GPT-4o Mini)"],
+    index=0
+)
 
-# Logout Button in Sidebar
-with st.sidebar:
-    st.write("Logged in as **Owner**")
-    if st.button("Log Out"):
-        st.session_state["authenticated"] = False
-        st.rerun()
+# API Keys from Secrets
+openai_key = st.secrets.get("OPENAI_API_KEY", "")
+gemini_key = st.secrets.get("GEMINI_API_KEY", "")
 
-# 3. Workspace Tabs
-tab1, tab2, tab3 = st.tabs(["📝 Listing Copywriter", "🎬 Video Script", "🖼️ Photo Staging"])
+# Unified LLM Generation Function
+def generate_real_estate_content(prompt, engine):
+    if "Gemini" in engine:
+        if not gemini_key:
+            st.error("Missing GEMINI_API_KEY in Streamlit Secrets!")
+            st.stop()
+        try:
+            genai.configure(api_key=gemini_key)
+            model = genai.GenerativeModel('gemini-2.5-flash')
+            response = model.generate_content(prompt)
+            return response.text
+        except Exception as e:
+            try:
+                # Fallback model in case of version variations
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                response = model.generate_content(prompt)
+                return response.text
+            except Exception as e2:
+                st.error(f"Gemini API Error: {str(e2)}")
+                return None
+    else: # OpenAI
+        if not openai_key:
+            st.error("Missing OPENAI_API_KEY in Streamlit Secrets!")
+            st.stop()
+        try:
+            client = openai.OpenAI(api_key=openai_key)
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            st.error(f"OpenAI API Error: {str(e)}")
+            return None
 
-# TAB 1: LISTING & SOCIAL COPY
+# --- MAIN DASHBOARD INTERFACE ---
+st.title("🏠 Property Studio AI Dashboard")
+st.caption(f"Currently active engine: **{ai_engine}**")
+
+# Tabs for tools
+tab1, tab2, tab3 = st.tabs(["✍️ Listing Copywriter", "🎬 Video Shot List", "🖼️ Photo Staging Prompts"])
+
 with tab1:
-    st.header("Listing & Social Media Copywriter")
-    details = st.text_area("Paste Unit Specs (e.g., Address, Unit Type, Size, etc):", height=120)
-    default_prompt = "You are an expert Singapore real estate marketer. Write a detailed PropertyGuru listing description and a social media caption (FB/IG) with strong hooks, bulleted features, and hashtags including #elvinlowsg."
-    system_prompt = st.text_area("Editable Prompt Rule (you can edit this anytime):", value=default_prompt, height=80)
-    
-    if st.button("Generate Marketing Copy"):
-        if details:
-            with st.spinner("Writing your copy..."):
-                res = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": details}
-                    ]
-                )
-                st.success("Done!")
-                st.write(res.choices[0].message.content)
+    st.subheader("Property Listing Copywriter")
+    col1, col2 = st.columns(2)
+    with col1:
+        property_type = st.selectbox("Property Type", ["HDB", "Condo", "Landed", "Commercial"])
+        location = st.text_input("Location / Project Name", placeholder="e.g. Tengah Garden Residences / Jurong East")
+        specs = st.text_input("Specs (Size / Beds / Baths)", placeholder="e.g. 5-room, 1,410 sqft, 11th floor")
+    with col2:
+        key_features = st.text_area("Key Selling Points", placeholder="Unblocked view, modern renovation, 5 mins to MRT...")
+        tone = st.selectbox("Tone of Voice", ["Engaging & Warm", "Luxury & Premium", "Investor-Focused", "Short & Punchy"])
 
-# TAB 2: VIDEO SCRIPT
+    if st.button("Generate Listing Description", type="primary"):
+        if not location:
+            st.warning("Please enter a location or project name.")
+        else:
+            prompt = f"""
+            Act as an expert real estate property marketer. Write a high-converting property listing optimized for PropertyGuru and social media.
+            
+            Property Type: {property_type}
+            Location/Project: {location}
+            Specifications: {specs}
+            Key Features: {key_features}
+            Tone: {tone}
+            
+            Structure the output with:
+            1. An attention-grabbing Headline
+            2. Highlighting top 3 core selling points (bullet points)
+            3. A detailed storytelling walkthrough of the unit
+            4. Clear Call to Action for viewing appointments
+            """
+            with st.spinner("Generating listing with AI..."):
+                result = generate_real_estate_content(prompt, ai_engine)
+                if result:
+                    st.success("Listing Ready!")
+                    st.text_area("Copy your description:", value=result, height=350)
+
 with tab2:
-    st.header("CapCut 2-Column Shot List")
-    video_input = st.text_area("Key Selling Points or Room Sequence for Video:", height=100)
+    st.subheader("Video Shot List & Script Generator")
+    v_type = st.text_input("Video Focus", placeholder="e.g. 4-Bedroom HDB Walkthrough, 60-second Instagram Reel")
+    v_highlights = st.text_area("Key Areas / Angles to Film", placeholder="Balcony view, master bedroom walk-in wardrobe, open kitchen...")
     
-    if st.button("Generate Video Shot List"):
-        if video_input:
-            with st.spinner("Creating shot list..."):
-                res = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[
-                        {"role": "system", "content": "Write a 30-second TikTok/Reels video shot list formatted as a 2-column table: Column 1 = [Visual Action/Camera Movement], Column 2 = [Voiceover / Caption]."},
-                        {"role": "user", "content": video_input}
-                    ]
-                )
-                st.success("Done!")
-                st.write(res.choices[0].message.content)
+    if st.button("Generate Shot List & Script"):
+        prompt = f"""
+        Create a detailed video shot list and voiceover script tailored for real estate video marketing (DJI Pocket / Mobile filming).
+        
+        Video Focus: {v_type}
+        Areas to Feature: {v_highlights}
+        
+        Provide:
+        - Shot # | Scene Description | Camera Movement | Suggested Voiceover / Text Overlay
+        Keep it organized sequentially for easy filming and CapCut editing.
+        """
+        with st.spinner("Creating shot list..."):
+            result = generate_real_estate_content(prompt, ai_engine)
+            if result:
+                st.success("Shot List Ready!")
+                st.markdown(result)
 
-# TAB 3: PHOTO DECLUTTER & STAGING PROMPTS
 with tab3:
-    st.header("Photo Editing & Staging Prompt Studio")
-    default_photo_prompt = "Remove all furniture, wall art, and clutter. Maintain architectural room layout, original floor texture, window placements, and ambient lighting. Output clean, bare empty room walls."
-    editable_photo_rule = st.text_area("Editable Standard Photo Rule:", value=default_photo_prompt, height=100)
-    room_type = st.text_input("Room Description (e.g., Master bedroom with parquet flooring):")
+    st.subheader("AI Photo Declutter & Staging Prompts")
+    p_desc = st.text_area("Describe the current room / photo", placeholder="e.g. Living room with dark wooden floor, cluttered sofa, dim light")
+    p_goal = st.selectbox("Transformation Goal", ["Virtual Declutter", "Virtual Staging (Modern Scandinavian)", "Virtual Staging (Luxury Minimalist)", "Brighten & Enhance"])
     
-    if st.button("Generate AI Image Prompt"):
-        if room_type:
-            full_prompt = f"{editable_photo_rule} Target Room: {room_type}"
-            st.subheader("Your Custom Prompt to copy into ChatGPT / DALL-E:")
-            st.code(full_prompt, language="text")
+    if st.button("Generate AI Image Edit Prompt"):
+        prompt = f"""
+        Write a precise image prompt for AI photo staging/decluttering tools (like Photoshop Generative Fill or Midjourney).
+        
+        Original Room: {p_desc}
+        Target Goal: {p_goal}
+        
+        Provide the exact prompt text to copy-paste into AI image editing tools for realistic property results.
+        """
+        with st.spinner("Generating prompt..."):
+            result = generate_real_estate_content(prompt, ai_engine)
+            if result:
+                st.success("Prompt Generated!")
+                st.code(result)
