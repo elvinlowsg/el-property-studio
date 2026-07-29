@@ -51,11 +51,22 @@ def generate_real_estate_content(prompt, engine):
         clean_key = str(gemini_key).strip().strip('"').strip("'")
         genai.configure(api_key=clean_key)
         
-        # Active Google Gemini models in order of preference
-        gemini_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
-        errors = []
+        # Automatically discover models assigned to your specific key
+        try:
+            available = [
+                m.name.replace("models/", "") 
+                for m in genai.list_models() 
+                if 'generateContent' in m.supported_generation_methods
+            ]
+            # Prioritize fast 'flash' models
+            flash_models = [m for m in available if "flash" in m.lower()]
+            other_models = [m for m in available if m not in flash_models]
+            candidate_models = flash_models + other_models
+        except Exception:
+            candidate_models = ["gemini-3-flash-preview", "gemini-2.0-flash", "gemini-1.5-flash"]
         
-        for model_name in gemini_models:
+        errors = []
+        for model_name in candidate_models:
             try:
                 model = genai.GenerativeModel(model_name)
                 response = model.generate_content(prompt)
@@ -65,8 +76,7 @@ def generate_real_estate_content(prompt, engine):
                 errors.append(f"{model_name}: {str(e)}")
                 continue
                 
-        # If all models failed, show the specific primary error
-        st.error(f"Gemini API Error details: {errors[0] if errors else 'Connection failed'}")
+        st.error(f"Gemini API Error details: {errors[0] if errors else 'No active Gemini models found for this key.'}")
         return None
         
     else: # OpenAI
