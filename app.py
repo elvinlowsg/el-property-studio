@@ -47,10 +47,12 @@ def generate_real_estate_content(prompt, engine):
             st.error("Missing GEMINI_API_KEY in Streamlit Secrets!")
             st.stop()
         
-        genai.configure(api_key=gemini_key)
+        # Clean API key to prevent whitespace/quote copy-paste errors
+        clean_key = str(gemini_key).strip().strip('"').strip("'")
+        genai.configure(api_key=clean_key)
         
-        # Try active Gemini Flash models in order
         gemini_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-flash-lite"]
+        errors = []
         
         for model_name in gemini_models:
             try:
@@ -58,10 +60,11 @@ def generate_real_estate_content(prompt, engine):
                 response = model.generate_content(prompt)
                 if response and response.text:
                     return response.text
-            except Exception:
+            except Exception as e:
+                errors.append(f"{model_name}: {str(e)}")
                 continue
                 
-        st.error("Gemini API Error: Unable to connect to active Gemini models. Please double-check your GEMINI_API_KEY in Streamlit Secrets.")
+        st.error(f"Gemini API Error: {errors[-1] if errors else 'Connection failed'}")
         return None
         
     else: # OpenAI
@@ -79,7 +82,7 @@ def generate_real_estate_content(prompt, engine):
         except Exception as e:
             st.error(f"OpenAI API Error: {str(e)}")
             return None
-
+            
 # --- MAIN DASHBOARD INTERFACE ---
 st.title("🏠 Property Studio AI Dashboard")
 st.caption(f"Currently active engine: **{ai_engine}**")
