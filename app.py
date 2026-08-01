@@ -159,7 +159,6 @@ with tab1:
             - Length: Must be between 10 and 70 characters total (including spaces).
             - Content: Promote the best feature of the listing.
             - Formatting: Plain text ONLY. Use sentence case with little punctuation marks (exclamation marks, commas, periods).
-            Example format: rare high floor 5rm unit near mrt fully renovated unblocked view
 
             ---PROPERTYGURU_DESCRIPTION---
             Rules for PropertyGuru Description:
