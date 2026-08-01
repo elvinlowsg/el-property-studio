@@ -128,7 +128,7 @@ tab1, tab2, tab3 = st.tabs(["✍️ Listing Copywriter", "🎬 Video Shot List",
 
 # --- TAB 1: LISTING COPYWRITER ---
 with tab1:
-    st.subheader("Property Listing Copywriter")
+    st.subheader("Listing Copywriter")
     col1, col2 = st.columns(2)
     with col1:
         property_type = st.selectbox("Property Type", ["HDB", "Condo", "Landed", "Commercial"])
@@ -181,10 +181,10 @@ with tab1:
                 
                 if result:
                     # Parse LLM response into separate variables
-                    if "---PG_HEADLINE---" in result and "---PG_DESCRIPTION---" in result and "---SOCIAL_MEDIA---" in result:
+                    if "---PROPERTYGURU_HEADLINE---" in result and "---PROPERTYGURU_DESCRIPTION---" in result and "---SOCIAL_MEDIA---" in result:
                         try:
-                            parts = result.split("---PG_HEADLINE---")[1]
-                            headline_part, rest = parts.split("---PG_DESCRIPTION---")
+                            parts = result.split("---PROPERTYGURU_HEADLINE---")[1]
+                            headline_part, rest = parts.split("---PROPERTYGURU_DESCRIPTION---")
                             desc_part, social_part = rest.split("---SOCIAL_MEDIA---")
                             
                             st.session_state["pg_headline"] = headline_part.strip()
@@ -204,12 +204,12 @@ with tab1:
         st.divider()
         st.markdown("### 🔴 PG Listing")
         
-        # PG Headline
+        # PropertyGuru Headline
         hl_len = len(st.session_state["pg_headline"])
         st.markdown(f"**1. PG Headline** `{hl_len} / 70 characters`")
         st.code(st.session_state["pg_headline"], language=None)
         
-        # PG Description
+        # PropertyGuru Description
         desc_len = len(st.session_state["pg_desc"])
         st.markdown(f"**2. PG Description** `{desc_len} / 2000 characters`")
         st.code(st.session_state["pg_desc"], language=None)
@@ -219,7 +219,7 @@ with tab1:
         st.markdown("**Copy-Paste Ready Post**")
         st.code(st.session_state["social_post"], language=None)
         
-        st.caption("💡 *Tip: Hover over any box above and click the copy icon in the top right corner to instantly copy the text!*")
+        st.caption("💡 *Tip: Hover over any box above and click the copy icon in the top right corner to instantly copy the text!*")the top right corner to instantly copy the text!*")
 
 # --- TAB 2: VIDEO SHOT LIST ---
 with tab2:
