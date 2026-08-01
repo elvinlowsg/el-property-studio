@@ -158,7 +158,7 @@ with tab1:
             Rules for Headline:
             - Length: Must be between 10 and 70 characters total (including spaces).
             - Content: Promote the best feature of the listing.
-            - Formatting: Plain text ONLY. Use lowercase or sentence case with little to NO capital letters and NO punctuation marks (no exclamation marks, no commas, no periods).
+            - Formatting: Plain text ONLY. Use sentence case with little punctuation marks (exclamation marks, commas, periods).
             Example format: rare high floor 5rm unit near mrt fully renovated unblocked view
 
             ---PROPERTYGURU_DESCRIPTION---
