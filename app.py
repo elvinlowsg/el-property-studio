@@ -1,6 +1,9 @@
 import streamlit as st
 import openai
 import google.generativeai as genai
+from PIL import Image
+import base64
+import io
 
 # --- PAGE CONFIG ---
 st.set_page_config(
@@ -29,54 +32,60 @@ if not st.session_state["authenticated"]:
 # --- SIDEBAR CONFIGURATION ---
 st.sidebar.title("⚙️ AI Engine Settings")
 
-# Model Selection Switcher (Gemini is DEFAULT at index 0)
 ai_engine = st.sidebar.selectbox(
     "Select AI Model:",
     ["🟢 Google Gemini (Free Tier)", "🔵 OpenAI (GPT-4o Mini)"],
     index=0
 )
 
-# API Keys from Secrets
 openai_key = st.secrets.get("OPENAI_API_KEY", "")
 gemini_key = st.secrets.get("GEMINI_API_KEY", "")
 
-# Unified LLM Generation Function
-def generate_real_estate_content(prompt, engine):
+# Helper to encode PIL Image to Base64 for OpenAI Vision
+def encode_image(pil_image):
+    buffered = io.BytesIO()
+    if pil_image.mode in ("RGBA", "P"):
+        pil_image = pil_image.convert("RGB")
+    pil_image.save(buffered, format="JPEG")
+    return base64.b64encode(buffered.getvalue()).decode('utf-8')
+
+# --- UNIFIED LLM GENERATION FUNCTION ---
+def generate_real_estate_content(prompt, engine, image=None):
     if "Gemini" in engine:
         if not gemini_key:
             st.error("Missing GEMINI_API_KEY in Streamlit Secrets!")
             st.stop()
         
-        # Clean API key to prevent whitespace or quote issues
         clean_key = str(gemini_key).strip().strip('"').strip("'")
         genai.configure(api_key=clean_key)
         
-        # Automatically discover models assigned to your specific key
+        # Discover active models
         try:
             available = [
                 m.name.replace("models/", "") 
                 for m in genai.list_models() 
                 if 'generateContent' in m.supported_generation_methods
             ]
-            # Prioritize fast 'flash' models
             flash_models = [m for m in available if "flash" in m.lower()]
             other_models = [m for m in available if m not in flash_models]
             candidate_models = flash_models + other_models
         except Exception:
-            candidate_models = ["gemini-3-flash-preview", "gemini-2.0-flash", "gemini-1.5-flash"]
+            candidate_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
         
         errors = []
         for model_name in candidate_models:
             try:
                 model = genai.GenerativeModel(model_name)
-                response = model.generate_content(prompt)
+                # Pass both image and text prompt to Gemini Vision
+                contents = [image, prompt] if image else prompt
+                response = model.generate_content(contents)
                 if response and response.text:
                     return response.text
             except Exception as e:
                 errors.append(f"{model_name}: {str(e)}")
                 continue
                 
-        st.error(f"Gemini API Error details: {errors[0] if errors else 'No active Gemini models found for this key.'}")
+        st.error(f"Gemini API Error details: {errors[0] if errors else 'No active Gemini models found.'}")
         return None
         
     else: # OpenAI
@@ -85,23 +94,39 @@ def generate_real_estate_content(prompt, engine):
             st.stop()
         try:
             client = openai.OpenAI(api_key=openai_key)
+            
+            if image:
+                base64_img = encode_image(image)
+                messages = [{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/jpeg;base64,{base64_img}"}
+                        }
+                    ]
+                }]
+            else:
+                messages = [{"role": "user", "content": prompt}]
+                
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
-                messages=[{"role": "user", "content": prompt}],
+                messages=messages,
                 temperature=0.7
             )
             return response.choices[0].message.content
         except Exception as e:
             st.error(f"OpenAI API Error: {str(e)}")
             return None
-            
+
 # --- MAIN DASHBOARD INTERFACE ---
 st.title("🏠 Property Studio AI Dashboard")
 st.caption(f"Currently active engine: **{ai_engine}**")
 
-# Tabs for tools
-tab1, tab2, tab3 = st.tabs(["✍️ Listing Copywriter", "🎬 Video Shot List", "🖼️ Photo Staging Prompts"])
+tab1, tab2, tab3 = st.tabs(["✍️ Listing Copywriter", "🎬 Video Shot List", "🖼️ Photo Staging & Vision Studio"])
 
+# --- TAB 1: LISTING COPYWRITER ---
 with tab1:
     st.subheader("Property Listing Copywriter")
     col1, col2 = st.columns(2)
@@ -118,7 +143,7 @@ with tab1:
             st.warning("Please enter a location or project name.")
         else:
             prompt = f"""
-            Act as an expert real estate property marketer. Write a high-converting property listing optimized for PropertyGuru and social media.
+            Act as an expert real estate property marketer in Singapore. Write a high-converting property listing optimized for PropertyGuru and social media.
             
             Property Type: {property_type}
             Location/Project: {location}
@@ -127,17 +152,18 @@ with tab1:
             Tone: {tone}
             
             Structure the output with:
-            1. An attention-grabbing Headline
-            2. Highlighting top 3 core selling points (bullet points)
-            3. A detailed storytelling walkthrough of the unit
-            4. Clear Call to Action for viewing appointments
+            1. Headline
+            2. Top 3 core selling points (bullet points)
+            3. Storytelling walkthrough of the unit
+            4. Clear Call to Action for viewings
             """
             with st.spinner("Generating listing with AI..."):
                 result = generate_real_estate_content(prompt, ai_engine)
                 if result:
                     st.success("Listing Ready!")
-                    st.text_area("Copy your description:", value=result, height=350)
+                    st.text_area("Copy description:", value=result, height=350)
 
+# --- TAB 2: VIDEO SHOT LIST ---
 with tab2:
     st.subheader("Video Shot List & Script Generator")
     v_type = st.text_input("Video Focus", placeholder="e.g. 4-Bedroom HDB Walkthrough, 60-second Instagram Reel")
@@ -160,22 +186,57 @@ with tab2:
                 st.success("Shot List Ready!")
                 st.markdown(result)
 
+# --- TAB 3: PHOTO STAGING & VISION STUDIO ---
 with tab3:
-    st.subheader("AI Photo Declutter & Staging Prompts")
-    p_desc = st.text_area("Describe the current room / photo", placeholder="e.g. Living room with dark wooden floor, cluttered sofa, dim light")
-    p_goal = st.selectbox("Transformation Goal", ["Virtual Declutter", "Virtual Staging (Modern Scandinavian)", "Virtual Staging (Luxury Minimalist)", "Brighten & Enhance"])
+    st.subheader("AI Photo Declutter & Staging Vision")
+    st.caption("Upload a photo of a room to let AI analyze its layout and generate precise staging / decluttering prompts.")
     
-    if st.button("Generate AI Image Edit Prompt"):
-        prompt = f"""
-        Write a precise image prompt for AI photo staging/decluttering tools (like Photoshop Generative Fill or Midjourney).
-        
-        Original Room: {p_desc}
-        Target Goal: {p_goal}
-        
-        Provide the exact prompt text to copy-paste into AI image editing tools for realistic property results.
-        """
-        with st.spinner("Generating prompt..."):
-            result = generate_real_estate_content(prompt, ai_engine)
-            if result:
-                st.success("Prompt Generated!")
-                st.code(result)
+    uploaded_file = st.file_uploader("Upload Room Photo (JPG or PNG)", type=["jpg", "jpeg", "png"])
+    
+    col_img, col_opts = st.columns([1, 1])
+    
+    with col_img:
+        if uploaded_file is not None:
+            uploaded_image = Image.open(uploaded_file)
+            st.image(uploaded_image, caption="Uploaded Room Photo", use_container_width=True)
+        else:
+            uploaded_image = None
+            st.info("Please upload a photo above to unlock Vision features.")
+
+    with col_opts:
+        staging_goal = st.selectbox(
+            "Select Staging Goal:",
+            [
+                "Virtual Declutter & Clean (Remove clutter/furniture)",
+                "Virtual Staging: Modern Scandinavian",
+                "Virtual Staging: Luxury Minimalist",
+                "Virtual Staging: Contemporary Warm",
+                "Enhance Lighting & Window View"
+            ]
+        )
+        custom_notes = st.text_area(
+            "Custom Edits / Retain Details (Optional):",
+            placeholder="e.g., Keep original parquet flooring, replace dark sofa with beige leather sofa, add modern art on back wall."
+        )
+
+    if st.button("Analyze Photo & Generate AI Prompt", type="primary"):
+        if uploaded_image is None:
+            st.error("Please upload an image first!")
+        else:
+            prompt = f"""
+            Analyze this uploaded room photograph in detail as a real estate photo editing expert.
+            
+            Target Editing Goal: {staging_goal}
+            Custom User Instructions: {custom_notes if custom_notes else 'None'}
+            
+            Perform the following:
+            1. Briefly describe the room's key architectural elements visible in the photo (flooring, lighting, window positions, room layout).
+            2. Generate a highly detailed, technical AI Inpainting/Generation Prompt (optimized for Photoshop Generative Fill, Midjourney, or Photoshop) to achieve the target editing goal while preserving original room geometry and flooring.
+            3. Provide step-by-step instructions on what area to select/mask in photo editing tools.
+            """
+            
+            with st.spinner("AI Vision is analyzing your photograph..."):
+                result = generate_real_estate_content(prompt, ai_engine, image=uploaded_image)
+                if result:
+                    st.success("Analysis & Staging Prompt Ready!")
+                    st.markdown(result)
