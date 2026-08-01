@@ -181,10 +181,10 @@ with tab1:
                 
                 if result:
                     # Parse LLM response into separate variables
-                    if "---PROPERTYGURU_HEADLINE---" in result and "---PROPERTYGURU_DESCRIPTION---" in result and "---SOCIAL_MEDIA---" in result:
+                    if "---PG_HEADLINE---" in result and "---PG_DESCRIPTION---" in result and "---SOCIAL_MEDIA---" in result:
                         try:
-                            parts = result.split("---PROPERTYGURU_HEADLINE---")[1]
-                            headline_part, rest = parts.split("---PROPERTYGURU_DESCRIPTION---")
+                            parts = result.split("---PG_HEADLINE---")[1]
+                            headline_part, rest = parts.split("---PG_DESCRIPTION---")
                             desc_part, social_part = rest.split("---SOCIAL_MEDIA---")
                             
                             st.session_state["pg_headline"] = headline_part.strip()
@@ -202,21 +202,21 @@ with tab1:
     # --- DISPLAY RESULTS WITH COPY CONTAINERS ---
     if "pg_headline" in st.session_state:
         st.divider()
-        st.markdown("### 🔴 PG Listing Copy")
+        st.markdown("### 🔴 PG Listing")
         
         # PG Headline
         hl_len = len(st.session_state["pg_headline"])
-        st.markdown(f"**1. PropertyGuru Headline** `{hl_len} / 70 characters` *(Plain text, minimal capitals/punctuation)*")
+        st.markdown(f"**1. PG Headline** `{hl_len} / 70 characters`")
         st.code(st.session_state["pg_headline"], language=None)
         
         # PG Description
         desc_len = len(st.session_state["pg_desc"])
-        st.markdown(f"**2. PropertyGuru Description** `{desc_len} / 2000 characters` *(Plain text)*")
+        st.markdown(f"**2. PG Description** `{desc_len} / 2000 characters`")
         st.code(st.session_state["pg_desc"], language=None)
         
         st.divider()
         st.markdown("### 🔵 Facebook & Instagram Post")
-        st.markdown("**Copy-Paste Ready Post** *(Includes CTA and #elvinlowsg)*")
+        st.markdown("**Copy-Paste Ready Post**")
         st.code(st.session_state["social_post"], language=None)
         
         st.caption("💡 *Tip: Hover over any box above and click the copy icon in the top right corner to instantly copy the text!*")
