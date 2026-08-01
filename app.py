@@ -219,7 +219,7 @@ with tab1:
         st.markdown("**Copy-Paste Ready Post**")
         st.code(st.session_state["social_post"], language=None)
         
-        st.caption("💡 *Tip: Hover over any box above and click the copy icon in the top right corner to instantly copy the text!*")the top right corner to instantly copy the text!*")
+        st.caption("💡 *Tip: Hover over any box above and click the copy icon in the top right corner to instantly copy the text!*")
 
 # --- TAB 2: VIDEO SHOT LIST ---
 with tab2:
