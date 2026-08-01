@@ -132,36 +132,94 @@ with tab1:
     col1, col2 = st.columns(2)
     with col1:
         property_type = st.selectbox("Property Type", ["HDB", "Condo", "Landed", "Commercial"])
-        location = st.text_input("Location / Project Name", placeholder="e.g. Tengah Garden Residences / Jurong East")
-        specs = st.text_input("Specs (Size / Beds / Baths)", placeholder="e.g. 5-room, 1,410 sqft, 11th floor")
+        location = st.text_input("Location / Project Name", placeholder="e.g. 196B Boon Lay Drive / Tengah Garden Residences")
+        specs = st.text_input("Specs (Size / Beds / Baths / Floor)", placeholder="e.g. 5-room, 1,410 sqft, 11th floor")
     with col2:
-        key_features = st.text_area("Key Selling Points", placeholder="Unblocked view, modern renovation, 5 mins to MRT...")
+        key_features = st.text_area("Key Selling Points", placeholder="Unblocked view, modern renovation, 5 mins to MRT, move-in condition...")
         tone = st.selectbox("Tone of Voice", ["Engaging & Warm", "Luxury & Premium", "Investor-Focused", "Short & Punchy"])
 
-    if st.button("Generate Listing Description", type="primary"):
+    if st.button("Generate Listing & Social Posts", type="primary"):
         if not location:
             st.warning("Please enter a location or project name.")
         else:
             prompt = f"""
-            Act as an expert real estate property marketer in Singapore. Write a high-converting property listing optimized for PropertyGuru and social media.
-            
-            Property Type: {property_type}
-            Location/Project: {location}
-            Specifications: {specs}
-            Key Features: {key_features}
-            Tone: {tone}
-            
-            Structure the output with:
-            1. Headline
-            2. Top 3 core selling points (bullet points)
-            3. Storytelling walkthrough of the unit
-            4. Clear Call to Action for viewings
+            Act as an expert real estate property marketer in Singapore. Generate high-converting property marketing copy tailored for PropertyGuru and Social Media.
+
+            Property Details:
+            - Property Type: {property_type}
+            - Location/Project: {location}
+            - Specifications: {specs}
+            - Key Features: {key_features}
+            - Tone: {tone}
+
+            Output EXACTLY 3 distinct sections using the strict section headers below. Do not include any introductory or concluding conversational text outside these sections.
+
+            ---PROPERTYGURU_HEADLINE---
+            Rules for Headline:
+            - Length: Must be between 10 and 70 characters total (including spaces).
+            - Content: Promote the best feature of the listing.
+            - Formatting: Plain text ONLY. Use lowercase or sentence case with little to NO capital letters and NO punctuation marks (no exclamation marks, no commas, no periods).
+            Example format: rare high floor 5rm unit near mrt fully renovated unblocked view
+
+            ---PROPERTYGURU_DESCRIPTION---
+            Rules for PropertyGuru Description:
+            - Thorough description about the property and unit to engage property seekers.
+            - Minimum 20 words, maximum 2000 characters limit.
+            - Plain text format, clean paragraphs, no complex markdown symbols.
+
+            ---SOCIAL_MEDIA---
+            Rules for Social Media (Facebook & Instagram):
+            - Formatted cleanly with engaging line breaks and tasteful emojis so it can be copied and pasted directly onto both Facebook and Instagram without any extra formatting needed.
+            - Grab property seekers' attention with a strong hook.
+            - Highlight key lifestyle and unit selling points.
+            - Include a clear Call to Action (CTA) for booking viewing appointments.
+            - MANDATORY: Include the personal hashtag #elvinlowsg at the bottom along with 3-5 relevant Singapore real estate hashtags.
             """
-            with st.spinner("Generating listing with AI..."):
+
+            with st.spinner("Generating marketing copy..."):
                 result = generate_real_estate_content(prompt, ai_engine)
+                
                 if result:
-                    st.success("Listing Ready!")
-                    st.text_area("Copy description:", value=result, height=350)
+                    # Parse LLM response into separate variables
+                    if "---PROPERTYGURU_HEADLINE---" in result and "---PROPERTYGURU_DESCRIPTION---" in result and "---SOCIAL_MEDIA---" in result:
+                        try:
+                            parts = result.split("---PROPERTYGURU_HEADLINE---")[1]
+                            headline_part, rest = parts.split("---PROPERTYGURU_DESCRIPTION---")
+                            desc_part, social_part = rest.split("---SOCIAL_MEDIA---")
+                            
+                            st.session_state["pg_headline"] = headline_part.strip()
+                            st.session_state["pg_desc"] = desc_part.strip()
+                            st.session_state["social_post"] = social_part.strip()
+                        except Exception:
+                            st.session_state["pg_headline"] = ""
+                            st.session_state["pg_desc"] = result
+                            st.session_state["social_post"] = result
+                    else:
+                        st.session_state["pg_headline"] = ""
+                        st.session_state["pg_desc"] = result
+                        st.session_state["social_post"] = result
+
+    # --- DISPLAY RESULTS WITH COPY CONTAINERS ---
+    if "pg_headline" in st.session_state:
+        st.divider()
+        st.markdown("### 🔴 PG Listing Copy")
+        
+        # PG Headline
+        hl_len = len(st.session_state["pg_headline"])
+        st.markdown(f"**1. PropertyGuru Headline** `{hl_len} / 70 characters` *(Plain text, minimal capitals/punctuation)*")
+        st.code(st.session_state["pg_headline"], language=None)
+        
+        # PG Description
+        desc_len = len(st.session_state["pg_desc"])
+        st.markdown(f"**2. PropertyGuru Description** `{desc_len} / 2000 characters` *(Plain text)*")
+        st.code(st.session_state["pg_desc"], language=None)
+        
+        st.divider()
+        st.markdown("### 🔵 Facebook & Instagram Post")
+        st.markdown("**Copy-Paste Ready Post** *(Includes CTA and #elvinlowsg)*")
+        st.code(st.session_state["social_post"], language=None)
+        
+        st.caption("💡 *Tip: Hover over any box above and click the copy icon in the top right corner to instantly copy the text!*")
 
 # --- TAB 2: VIDEO SHOT LIST ---
 with tab2:
