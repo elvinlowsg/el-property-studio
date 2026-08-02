@@ -245,8 +245,8 @@ with tab2:
 
 # --- TAB 3: PHOTO STAGING & VISION STUDIO ---
 with tab3:
-    st.subheader("AI Photo Declutter & Staging Vision")
-    st.caption("Upload a photo of a room to let AI analyze its layout and generate precise staging / decluttering prompts.")
+    st.subheader("🖼️ AI Photo Declutter & Staging Vision")
+    st.caption("Upload a room photo to generate optimized prompts for ChatGPT or Nano Banana image editing.")
     
     uploaded_file = st.file_uploader("Upload Room Photo (JPG or PNG)", type=["jpg", "jpeg", "png"])
     
@@ -262,38 +262,82 @@ with tab3:
 
     with col_opts:
         staging_goal = st.selectbox(
-            "Select Staging Goal:",
+            "Select Staging / Editing Goal:",
             [
-                "Virtual Declutter & Clean (Remove clutter/furniture)",
-                "Virtual Staging: Modern Scandinavian",
+                "Light Declutter (Remove loose items, keep main furniture intact)",
+                "Full Reset (Empty room, keep structural items only)",
+                "Virtual Staging: Modern Scandinavia",
                 "Virtual Staging: Luxury Minimalist",
                 "Virtual Staging: Contemporary Warm",
-                "Enhance Lighting & Window View"
+                "Virtual Staging: Japandi",
+                "Virtual Staging: Wabi-Sabi",
+                "Virtual Staging: Muji-Inspired"
             ]
         )
         custom_notes = st.text_area(
-            "Custom Edits / Retain Details (Optional):",
-            placeholder="e.g., Keep original parquet flooring, replace dark sofa with beige leather sofa, add modern art on back wall."
+            "Custom Details / Notes (Optional):",
+            placeholder="e.g., Preserve original parquet flooring, replace dark sofa with cream linen couch, keep unblocked balcony view..."
         )
 
-    if st.button("Analyze Photo & Generate AI Prompt", type="primary"):
+    if st.button("Analyze Photo & Generate Prompt", type="primary"):
         if uploaded_image is None:
             st.error("Please upload an image first!")
         else:
             prompt = f"""
-            Analyze this uploaded room photograph in detail as a real estate photo editing expert.
-            
-            Target Editing Goal: {staging_goal}
-            Custom User Instructions: {custom_notes if custom_notes else 'None'}
-            
-            Perform the following:
-            1. Briefly describe the room's key architectural elements visible in the photo (flooring, lighting, window positions, room layout).
-            2. Generate a highly detailed, technical AI Inpainting/Generation Prompt (optimized for Photoshop Generative Fill, Midjourney, or Photoshop) to achieve the target editing goal while preserving original room geometry and flooring.
-            3. Provide step-by-step instructions on what area to select/mask in photo editing tools.
+            Act as an expert real estate photo staging technician and AI prompt engineer.
+            Analyze the uploaded photograph and write an optimized image-editing prompt for ChatGPT or Nano Banana (Google Image AI).
+
+            Target Staging Goal: {staging_goal}
+            Custom Instructions: {custom_notes if custom_notes else 'None'}
+
+            Perform the following 2 tasks strictly:
+
+            1. Architectural Analysis:
+               - Briefly analyze and describe the key architectural and structural elements in the photo (room layout, ceiling height, window and door placements, lighting direction, flooring material/color, wall colors).
+
+            2. ChatGPT / Nano Banana Copy-Paste Prompt:
+               - Write a precise, highly detailed image-to-image text prompt designed to be pasted directly into ChatGPT or Nano Banana alongside this photo.
+               - Mandatory Preservation Rules: Preservation clause MUST be explicit. Do NOT alter original room geometry, wall positions, window/door placements, ceiling height, structural colors, or flooring materials.
+               - Mandatory Staging Rules depending on goal:
+                 * If 'Light Declutter': Instruct the AI to detect and remove loose surface clutter (toys, boxes, cups, papers, trash, cables) from floors, tables, and cabinets, while keeping all main furniture (sofas, tables, built-in cabinets, bed frames, rugs) intact.
+                 * If 'Full Reset Declutter': Instruct the AI to remove all movable furniture, decor, and clutter completely, resetting the room to a pristine empty state while preserving all original walls, doors, windows, ceiling, and flooring intact.
+                 * If 'Virtual Staging' (Japandi / Wabi-Sabi / Muji-Inspired / etc.): Specify authentic interior materials, color palettes, organic wood, linen textures, muted earthy tones, paper or ceramic accents, proper scale, natural light direction matching, soft contact shadows under placed furniture, and high-end real estate photography finish.
+               - High-End Real Estate Photography Enhancement: Ensure the prompt requests bright, professional, crisp exposure, clear window views, balanced daylighting, realistic contact shadows, and high-resolution architectural photo quality without distorting physical room boundaries.
+
+            Format the final response with the following exact markers:
+            ---ARCHITECTURAL_ANALYSIS---
+            [Insert Architectural Analysis here]
+
+            ---STAGING_PROMPT---
+            [Insert the exact, copy-paste ready text prompt for ChatGPT or Nano Banana here. Clean text, no markdown bolding inside the prompt string itself.]
             """
-            
+
             with st.spinner("AI Vision is analyzing your photograph..."):
                 result = generate_real_estate_content(prompt, ai_engine, image=uploaded_image)
+                
                 if result:
-                    st.success("Analysis & Staging Prompt Ready!")
-                    st.markdown(result)
+                    if "---ARCHITECTURAL_ANALYSIS---" in result and "---STAGING_PROMPT---" in result:
+                        try:
+                            parts = result.split("---ARCHITECTURAL_ANALYSIS---")[1]
+                            analysis_part, prompt_part = parts.split("---STAGING_PROMPT---")
+                            st.session_state["staging_analysis"] = analysis_part.strip()
+                            st.session_state["staging_prompt"] = prompt_part.strip()
+                        except Exception:
+                            st.session_state["staging_analysis"] = "Room Analysis complete."
+                            st.session_state["staging_prompt"] = result
+                    else:
+                        st.session_state["staging_analysis"] = "Room Analysis complete."
+                        st.session_state["staging_prompt"] = result
+
+    # --- DISPLAY RESULTS WITH COPY CONTAINER ---
+    if "staging_prompt" in st.session_state:
+        st.divider()
+        st.markdown("### 🏛️ Room Architectural Analysis")
+        st.markdown(st.session_state.get("staging_analysis", ""))
+        
+        st.divider()
+        st.markdown("### 📋 Copy-Paste Prompt for ChatGPT / Nano Banana")
+        st.caption("Copy this prompt directly into ChatGPT or Nano Banana alongside your uploaded photo.")
+        st.code(st.session_state["staging_prompt"], language=None)
+        
+        st.caption("💡 *Tip: Click the copy icon in the top right corner of the box above to instantly copy your prompt!*")
