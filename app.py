@@ -350,7 +350,7 @@ with tab3:
 # --- TAB 4: 2D TO 3D FLOOR PLAN STUDIO ---
 with tab4:
     st.subheader("📐 2D to 3D Floor Plan Studio")
-    st.caption("Upload a 2D floor plan photo to decode architectural lines, door arcs, wall boundaries, and generate a photorealistic 3D render prompt.")
+    st.caption("Convert a 2D architectural blueprint into a simplified, structurally accurate 3D render prompt for Nano Banana or ChatGPT.")
 
     uploaded_plan = st.file_uploader(
         "Upload 2D Floor Plan (JPG or PNG)", 
@@ -369,121 +369,88 @@ with tab4:
             st.info("Please upload a 2D floor plan photo above to unlock 3D features.")
 
     with col_settings:
+        camera_view = st.radio(
+            "Camera Viewpoint:",
+            [
+                "Top-Down 3D View (Overhead bird's-eye layout)",
+                "45° Angled 3D Isometric View (Best for depth & wall height)"
+            ]
+        )
+
         design_style = st.selectbox(
-            "Interior Design Style",
+            "Interior Design Style:",
             [
-                "Japandi Minimalism (Warm Light Wood, Neutral Tones, Organic Elements)",
-                "Wabi-Sabi Warmth (Textured Plaster, Earthy Palette, Curved Furniture)",
-                "Muji-Inspired (Clean Functional Layout, Soft Linen Fabrics, Light Timber)",
-                "Modern Scandinavian (Light Oak, Crisp White Walls, Cozy Accents)",
-                "Luxury Modern (Slab Marble, Brass Accents, Plush Charcoal Upholstery)",
-                "Contemporary Urban Minimalist (Sleek Mattes, Glass Panels, Recessed LEDs)",
-                "Warm Industrial Loft (Exposed Concrete Accents, Black Metal Trim, Brick)"
-            ]
-        )
-
-        camera_view = st.selectbox(
-            "3D Camera Viewpoint",
-            [
-                "45° Isometric 3D Cutaway (Best for overall spatial layout & raised wall height)",
-                "Overhead Top-Down 3D Floor Plan View",
-                "Eye-Level Architectural Walkthrough View",
-                "Axonometric Maquette Model on Clean Studio Background"
-            ]
-        )
-
-        flooring_type = st.selectbox(
-            "Flooring Material",
-            [
-                "Light Oak Timber Flooring",
-                "Large-Format Off-White Marble Tiles",
-                "Light Beige Seamless Vinyl Planks",
-                "Herringbone Hardwood Parquet",
-                "Polished Light Microcement"
-            ]
-        )
-
-        wall_finish = st.selectbox(
-            "Wall & Trim Finishes",
-            [
-                "Warm Cream/Beige Plaster with Matte White Trim",
-                "Crisp Architectural White Walls",
-                "Light Textured Lime-wash Plaster",
-                "Soft Grey Accent Walls & Off-White Trim"
-            ]
-        )
-
-        lighting_style = st.selectbox(
-            "Lighting & Ambiance",
-            [
-                "Soft Natural Daylight with Gentle Sunlight Shadows",
-                "Golden Hour Warm Daylight Streaming Through Windows",
-                "Bright Architectural Studio Lighting",
-                "Warm Evening Interior Recessed Ambient Lighting"
+                "Japandi Minimalism (Warm light wood, neutral tones, organic textures)",
+                "Wabi-Sabi (Textured plaster, earthy palette, organic curved furniture)",
+                "Muji-Inspired (Clean functional layout, soft linen, light timber)",
+                "Modern Scandinavian (Light oak, crisp white walls, warm cozy accents)",
+                "Luxury Modern (Slab marble, brass accents, plush charcoal upholstery)",
+                "Contemporary Urban Minimalist (Sleek mattes, glass panels, recessed LEDs)"
             ]
         )
 
         custom_notes = st.text_area(
-            "Custom Furniture or Layout Instructions (Optional)",
-            placeholder="E.g., Place L-shaped beige sofa against living room wall, 6-seater oak dining table near kitchen entrance..."
+            "Custom Notes (Optional):",
+            placeholder="e.g. Place L-shaped beige couch in living room, light parquet flooring throughout..."
         )
 
-    if st.button("Analyze Floor Plan & Generate 3D Spec", type="primary", key="btn_gen_3d"):
+    if st.button("Generate 3D Render Prompt", type="primary", key="btn_gen_3d"):
         if uploaded_image is None:
             st.error("Please upload a 2D floor plan image first!")
         else:
+            # Extract simplified camera term
+            cam_type = "Top-down 3D bird's-eye floor plan view" if "Top-Down" in camera_view else "45-degree angled 3D isometric cutaway view"
+
             prompt = f"""
-            You are an expert Architectural Visualizer, Spatial Planner, and AI Prompt Engineer.
-            Examine the uploaded 2D floor plan image in detail.
+            Act as an expert real estate 3D visualizer and AI prompt engineer.
+            Examine this uploaded 2D floor plan image carefully.
 
-            Analyze the architectural lines, symbols, structural load-bearing walls vs thin partition walls, door swing arcs, sliding window panels, and spatial layout flow.
+            Your task is to create a streamlined, direct, and hyper-accurate image-to-image generation prompt to convert this exact 2D floor plan into a 3D floor plan model using tools like Nano Banana or ChatGPT Vision.
 
-            Apply these 3D rendering design choices:
-            - Interior Style: {design_style}
-            - Camera Viewpoint: {camera_view}
-            - Wall Height: Raised 2.8m 3D cutaway walls (no roof overhead so layout is fully visible)
-            - Flooring Material: {flooring_type}
-            - Wall Finishes: {wall_finish}
-            - Lighting & Ambiance: {lighting_style}
-            - Additional Notes: {custom_notes if custom_notes else 'None'}
+            Selected Choices:
+            - Camera Angle: {cam_type}
+            - Interior Design Style: {design_style}
+            - Custom Notes: {custom_notes if custom_notes else 'None'}
 
-            Perform the following 2 tasks strictly and format with these EXACT section markers:
+            Rules for the generated prompt:
+            1. STRICT STRUCTURAL ACCURACY: Instruct the AI to treat the uploaded 2D floor plan as a mandatory 1:1 structural blueprint. All internal wall positions, room dimensions, door locations, door opening swing directions, and window positions MUST match the uploaded 2D plan exactly.
+            2. EXTERIOR WALLS CUTAWAY: Explicitly state to leave exterior boundary walls open/cutaway or shell-free so the interior layout is fully visible without obstructing outer walls.
+            3. INTERIOR STYLING: Apply the chosen design style ({design_style}) to all internal rooms, including appropriate furniture, flooring, and soft natural lighting.
 
-            ---ARCHITECTURAL_ANALYSIS---
-            1. Structural Overview: Differentiate structural load-bearing walls vs interior partition walls, doors, sliding glass, and windows.
-            2. Room-by-Room Flow: Trace spatial movement between Living, Dining, Kitchen, Bedrooms, and Balcony/Yard.
+            Format the final response with these EXACT markers:
+            ---PLAN_SUMMARY---
+            A 2-sentence summary confirming the layout detected (e.g. number of bedrooms, main living area placement).
 
             ---3D_PROMPT---
-            Write a precise, raw, copy-pasteable text prompt designed to be pasted into ChatGPT, Nano Banana Pro, Midjourney, or SDXL alongside this 2D floor plan.
-            The prompt must instruct the AI to render a photorealistic 3D cutaway model with raised walls, full interior furnishings matching the chosen design style, exact materials, realistic daylighting, and contact shadows. Clean text, no markdown bolding inside the prompt string itself.
+            Write the clean, direct, copy-pasteable text prompt for Nano Banana or ChatGPT. No markdown bolding inside the prompt string itself.
             """
 
-            with st.spinner("Decoding 2D symbols and generating 3D render specification..."):
+            with st.spinner("Analyzing blueprint and generating 3D render prompt..."):
                 result = generate_real_estate_content(prompt, ai_engine, image=uploaded_image)
                 
                 if result:
-                    if "---ARCHITECTURAL_ANALYSIS---" in result and "---3D_PROMPT---" in result:
+                    if "---PLAN_SUMMARY---" in result and "---3D_PROMPT---" in result:
                         try:
-                            parts = result.split("---ARCHITECTURAL_ANALYSIS---")[1]
-                            analysis_part, prompt_part = parts.split("---3D_PROMPT---")
-                            st.session_state["fp_analysis"] = analysis_part.strip()
+                            parts = result.split("---PLAN_SUMMARY---")[1]
+                            summary_part, prompt_part = parts.split("---3D_PROMPT---")
+                            st.session_state["fp_analysis"] = summary_part.strip()
                             st.session_state["fp_prompt"] = prompt_part.strip()
                         except Exception:
-                            st.session_state["fp_analysis"] = "Analysis complete."
+                            st.session_state["fp_analysis"] = "2D Floor plan processed."
                             st.session_state["fp_prompt"] = result
                     else:
-                        st.session_state["fp_analysis"] = "Analysis complete."
+                        st.session_state["fp_analysis"] = "2D Floor plan processed."
                         st.session_state["fp_prompt"] = result
 
     # --- DISPLAY RESULTS WITH COPY CONTAINER ---
     if "fp_prompt" in st.session_state:
         st.divider()
-        st.markdown("### 📐 2D Architectural & Symbol Analysis")
+        st.markdown("### 📐 Floor Plan Layout Summary")
         st.markdown(st.session_state.get("fp_analysis", ""))
         
         st.divider()
-        st.markdown("### 📋 Copy-Paste 3D Render Prompt for Nano Banana / ChatGPT / Midjourney")
-        st.caption("Copy this prompt directly into your AI image generator alongside your uploaded 2D floor plan.")
+        st.markdown("### 📋 Copy-Paste 3D Render Prompt for Nano Banana / ChatGPT")
+        st.caption("Upload your 2D plan to Nano Banana or ChatGPT and paste this exact prompt alongside it.")
         st.code(st.session_state["fp_prompt"], language=None)
         
         st.caption("💡 *Tip: Click the copy icon in the top right corner of the box above to instantly copy your 3D prompt!*")
