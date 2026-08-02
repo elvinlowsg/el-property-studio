@@ -349,134 +349,141 @@ with tab3:
 
 # --- TAB 4: 2D TO 3D FLOOR PLAN STUDIO ---
 with tab4:
-    st.header("📐 2D to 3D Floor Plan Studio")
-    st.write(
-        "Upload a 2D floor plan image to decode architectural symbols (walls, doors, windows), "
-        "analyze spatial flow, and generate a photorealistic 3D rendering prompt with raised walls and custom interior styling."
-    )
+    st.subheader("📐 2D to 3D Floor Plan Studio")
+    st.caption("Upload a 2D floor plan photo to decode architectural lines, door arcs, wall boundaries, and generate a photorealistic 3D render prompt.")
 
-    # File uploader for 2D Floor Plan
     uploaded_plan = st.file_uploader(
-        "Upload 2D Floor Plan (JPG, PNG)", 
+        "Upload 2D Floor Plan (JPG or PNG)", 
         type=["jpg", "jpeg", "png"], 
         key="fp_3d_uploader"
     )
 
-    if uploaded_plan is not None:
-        col_img, col_settings = st.columns([1, 1])
+    col_img, col_settings = st.columns([1, 1])
 
-        with col_img:
-            st.image(uploaded_plan, caption="Uploaded 2D Floor Plan", use_container_width=True)
+    with col_img:
+        if uploaded_plan is not None:
+            uploaded_image = Image.open(uploaded_plan)
+            st.image(uploaded_image, caption="Uploaded 2D Floor Plan", use_container_width=True)
+        else:
+            uploaded_image = None
+            st.info("Please upload a 2D floor plan photo above to unlock 3D features.")
 
-        with col_settings:
-            st.subheader("⚙️ 3D Render Controls")
-            
-            design_style = st.selectbox(
-                "Interior Design Style",
-                [
-                    "Japandi Minimalism (Warm Light Wood, Neutral Tones, Organic Elements)",
-                    "Wabi-Sabi Warmth (Textured Plaster, Earthy Palette, Curved Furniture)",
-                    "Modern Scandinavian (Light Oak, Crisp White Walls, Cozy Accents)",
-                    "Luxury Modern (Slab Marble, Brass Accents, Plush Charcoal Upholstery)",
-                    "Muji-Inspired (Clean Functional Layout, Soft Linen Fabrics, Light Timber)",
-                    "Contemporary Urban Minimalist (Sleek Mattes, Glass Panels, Recessed LEDs)",
-                    "Warm Industrial Loft (Exposed Concrete Accents, Black Metal Trim, Brick)"
-                ]
-            )
+    with col_settings:
+        design_style = st.selectbox(
+            "Interior Design Style",
+            [
+                "Japandi Minimalism (Warm Light Wood, Neutral Tones, Organic Elements)",
+                "Wabi-Sabi Warmth (Textured Plaster, Earthy Palette, Curved Furniture)",
+                "Muji-Inspired (Clean Functional Layout, Soft Linen Fabrics, Light Timber)",
+                "Modern Scandinavian (Light Oak, Crisp White Walls, Cozy Accents)",
+                "Luxury Modern (Slab Marble, Brass Accents, Plush Charcoal Upholstery)",
+                "Contemporary Urban Minimalist (Sleek Mattes, Glass Panels, Recessed LEDs)",
+                "Warm Industrial Loft (Exposed Concrete Accents, Black Metal Trim, Brick)"
+            ]
+        )
 
-            camera_view = st.selectbox(
-                "3D Camera Viewpoint",
-                [
-                    "45° Isometric 3D Cutaway (Best for overall spatial layout & wall height)",
-                    "Overhead Top-Down 3D Floor Plan View",
-                    "Eye-Level Architectural Walkthrough View",
-                    "Axonometric Maquette Model on Clean Studio Background"
-                ]
-            )
+        camera_view = st.selectbox(
+            "3D Camera Viewpoint",
+            [
+                "45° Isometric 3D Cutaway (Best for overall spatial layout & raised wall height)",
+                "Overhead Top-Down 3D Floor Plan View",
+                "Eye-Level Architectural Walkthrough View",
+                "Axonometric Maquette Model on Clean Studio Background"
+            ]
+        )
 
-            flooring_type = st.selectbox(
-                "Flooring Material",
-                [
-                    "Light Oak Timber Flooring",
-                    "Large-Format Off-White Marble Tiles",
-                    "Light Beige Seamless Vinyl Planks",
-                    "Herringbone Hardwood Parquet",
-                    "Polished Light Microcement"
-                ]
-            )
+        flooring_type = st.selectbox(
+            "Flooring Material",
+            [
+                "Light Oak Timber Flooring",
+                "Large-Format Off-White Marble Tiles",
+                "Light Beige Seamless Vinyl Planks",
+                "Herringbone Hardwood Parquet",
+                "Polished Light Microcement"
+            ]
+        )
 
-            wall_finish = st.selectbox(
-                "Wall & Trim Finishes",
-                [
-                    "Warm Cream/Beige Plaster with Matte White Trim",
-                    "Crisp Architectural White Walls",
-                    "Light Textured Lime-wash Plaster",
-                    "Soft Grey Accent Walls & Off-White Trim"
-                ]
-            )
+        wall_finish = st.selectbox(
+            "Wall & Trim Finishes",
+            [
+                "Warm Cream/Beige Plaster with Matte White Trim",
+                "Crisp Architectural White Walls",
+                "Light Textured Lime-wash Plaster",
+                "Soft Grey Accent Walls & Off-White Trim"
+            ]
+        )
 
-            lighting_style = st.selectbox(
-                "Lighting & Ambiance",
-                [
-                    "Soft Natural Daylight with Gentle Sunlight Shadows",
-                    "Golden Hour Warm Daylight Streaming Through Windows",
-                    "Bright Architectural Studio Lighting",
-                    "Warm Evening Interior Recessed Ambient Lighting"
-                ]
-            )
+        lighting_style = st.selectbox(
+            "Lighting & Ambiance",
+            [
+                "Soft Natural Daylight with Gentle Sunlight Shadows",
+                "Golden Hour Warm Daylight Streaming Through Windows",
+                "Bright Architectural Studio Lighting",
+                "Warm Evening Interior Recessed Ambient Lighting"
+            ]
+        )
 
-            custom_notes = st.text_area(
-                "Specific Furniture or Layout Instructions (Optional)",
-                placeholder="E.g., Place L-shaped beige sofa against the living room wall, 6-seater oak dining table near kitchen entrance, king bed in master bedroom..."
-            )
+        custom_notes = st.text_area(
+            "Custom Furniture or Layout Instructions (Optional)",
+            placeholder="E.g., Place L-shaped beige sofa against living room wall, 6-seater oak dining table near kitchen entrance..."
+        )
 
-        st.markdown("---")
+    if st.button("Analyze Floor Plan & Generate 3D Spec", type="primary", key="btn_gen_3d"):
+        if uploaded_image is None:
+            st.error("Please upload a 2D floor plan image first!")
+        else:
+            prompt = f"""
+            You are an expert Architectural Visualizer, Spatial Planner, and AI Prompt Engineer.
+            Examine the uploaded 2D floor plan image in detail.
+
+            Analyze the architectural lines, symbols, structural load-bearing walls vs thin partition walls, door swing arcs, sliding window panels, and spatial layout flow.
+
+            Apply these 3D rendering design choices:
+            - Interior Style: {design_style}
+            - Camera Viewpoint: {camera_view}
+            - Wall Height: Raised 2.8m 3D cutaway walls (no roof overhead so layout is fully visible)
+            - Flooring Material: {flooring_type}
+            - Wall Finishes: {wall_finish}
+            - Lighting & Ambiance: {lighting_style}
+            - Additional Notes: {custom_notes if custom_notes else 'None'}
+
+            Perform the following 2 tasks strictly and format with these EXACT section markers:
+
+            ---ARCHITECTURAL_ANALYSIS---
+            1. Structural Overview: Differentiate structural load-bearing walls vs interior partition walls, doors, sliding glass, and windows.
+            2. Room-by-Room Flow: Trace spatial movement between Living, Dining, Kitchen, Bedrooms, and Balcony/Yard.
+
+            ---3D_PROMPT---
+            Write a precise, raw, copy-pasteable text prompt designed to be pasted into ChatGPT, Nano Banana Pro, Midjourney, or SDXL alongside this 2D floor plan.
+            The prompt must instruct the AI to render a photorealistic 3D cutaway model with raised walls, full interior furnishings matching the chosen design style, exact materials, realistic daylighting, and contact shadows. Clean text, no markdown bolding inside the prompt string itself.
+            """
+
+            with st.spinner("Decoding 2D symbols and generating 3D render specification..."):
+                result = generate_real_estate_content(prompt, ai_engine, image=uploaded_image)
+                
+                if result:
+                    if "---ARCHITECTURAL_ANALYSIS---" in result and "---3D_PROMPT---" in result:
+                        try:
+                            parts = result.split("---ARCHITECTURAL_ANALYSIS---")[1]
+                            analysis_part, prompt_part = parts.split("---3D_PROMPT---")
+                            st.session_state["fp_analysis"] = analysis_part.strip()
+                            st.session_state["fp_prompt"] = prompt_part.strip()
+                        except Exception:
+                            st.session_state["fp_analysis"] = "Analysis complete."
+                            st.session_state["fp_prompt"] = result
+                    else:
+                        st.session_state["fp_analysis"] = "Analysis complete."
+                        st.session_state["fp_prompt"] = result
+
+    # --- DISPLAY RESULTS WITH COPY CONTAINER ---
+    if "fp_prompt" in st.session_state:
+        st.divider()
+        st.markdown("### 📐 2D Architectural & Symbol Analysis")
+        st.markdown(st.session_state.get("fp_analysis", ""))
         
-        if st.button("🚀 Analyze Floor Plan & Generate 3D Model Spec", type="primary", key="btn_gen_3d"):
-            with st.spinner("Decoding architectural lines, wall boundaries, door swings, and crafting 3D render prompt..."):
-                try:
-                    from PIL import Image
-                    img = Image.open(uploaded_plan)
-
-                    prompt = f"""
-You are an expert Architectural Visualizer, Spatial Planner, and AI Prompt Engineer.
-Examine the uploaded 2D floor plan image in detail.
-
-### STEP 1: ARCHITECTURAL SYMBOL DECODING
-1. **Wall Structure:** Differentiate thick solid lines (load-bearing structural walls) from thinner interior partition walls.
-2. **Openings:** Detect door swing arcs, glass sliding panel lines, and window locations.
-3. **Room Inventory & Flow:** Identify all room labels (Living, Dining, Kitchen, Bedrooms, Bathrooms, Balcony, Yard, Utility) and trace key movement paths.
-
-### STEP 2: 3D CONVERSION MASTER SPECIFICATION
-Formulate a full architectural breakdown and a copy-pasteable 3D prompt for AI image generators (such as Nano Banana Pro, Midjourney v6/v8, ChatGPT Vision, or SDXL).
-
-Apply these design preferences:
-- **Style Theme:** {design_style}
-- **Camera Perspective:** {camera_view}
-- **Wall Height & Mode:** Raised 2.8m 3D walls shown in a cutaway section mode (no roof overhead so interior layout is fully visible).
-- **Flooring Finish:** {flooring_type}
-- **Wall Finishes:** {wall_finish}
-- **Lighting Setup:** {lighting_style}
-- **Custom Directives:** {custom_notes if custom_notes else "Furnish each room naturally according to its function and chosen style."}
-
----
-
-### OUTPUT FORMAT:
-Provide a clean response formatted with these exact markdown headers:
-
-## 📐 1. Architectural Symbol & Layout Analysis
-- **Structural Overview:** Analysis of load-bearing walls vs partition walls, door orientation, and window placement.
-- **Room-by-Room Breakdown:** List each room's orientation, door access points, and spatial layout flow.
-
-## 🎨 2. Master 3D Rendering Prompt (Copy-Paste Ready)
-Provide a structured, raw prompt in a code box that can be directly pasted into Midjourney or Nano Banana Pro to render a photorealistic 3D cutaway model with raised walls, full interior furnishings, matching materials, and natural daylighting.
-"""
-
-                    # Send image + prompt to Gemini model
-                    response = st.session_state.model.generate_content([prompt, img])
-
-                    st.success("✅ 3D Floor Plan Analysis & Prompt Generated!")
-                    st.markdown(response.text)
-
-                except Exception as e:
-                    st.error(f"Error analyzing 2D floor plan: {str(e)}")
+        st.divider()
+        st.markdown("### 📋 Copy-Paste 3D Render Prompt for Nano Banana / ChatGPT / Midjourney")
+        st.caption("Copy this prompt directly into your AI image generator alongside your uploaded 2D floor plan.")
+        st.code(st.session_state["fp_prompt"], language=None)
+        
+        st.caption("💡 *Tip: Click the copy icon in the top right corner of the box above to instantly copy your 3D prompt!*")
